@@ -6,19 +6,48 @@ import Review from "../models/Review.js";
 
 
 // ======================================================
-// @desc Create Restaurant (Owner/Admin)
+// @desc Create Restaurant
 // @route POST /api/restaurants
 // ======================================================
 export const createRestaurant = async (req, res) => {
   try {
-    const { name, image, location, cuisine, deliveryTime } = req.body;
+    const {
+      name,
+      description,
+      location,
+      address,
+      phone,
+      email,
+      cuisine,
+      deliveryTime,
+      openingTime,
+      closingTime,
+      minimumOrderAmount,
+      deliveryFee,
+    } = req.body;
 
     const restaurant = await Restaurant.create({
       name,
-      image,
+      description,
       location,
+      address,
+      phone,
+      email,
       cuisine,
       deliveryTime,
+      openingTime,
+      closingTime,
+      minimumOrderAmount,
+      deliveryFee,
+
+      image: req.files?.image?.[0]?.filename
+        ? `/uploads/restaurants/${req.files.image[0].filename}`
+        : "",
+
+      bannerImage: req.files?.bannerImage?.[0]?.filename
+        ? `/uploads/restaurants/${req.files.bannerImage[0].filename}`
+        : "",
+
       createdBy: req.user._id,
     });
 
@@ -27,28 +56,36 @@ export const createRestaurant = async (req, res) => {
       message: "Restaurant created successfully",
       restaurant,
     });
+
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
 
 // ======================================================
 // @desc Get All Restaurants
-// @route GET /api/restaurants
 // ======================================================
 export const getAllRestaurants = async (req, res) => {
   try {
     const restaurants = await Restaurant.find()
-      .populate("createdBy", "name email");
+      .populate("createdBy", "name email")
+      .sort({ createdAt: -1 });
 
     res.status(200).json({
       success: true,
       count: restaurants.length,
       restaurants,
     });
+
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
@@ -62,15 +99,22 @@ export const getRestaurantById = async (req, res) => {
       .populate("createdBy", "name email");
 
     if (!restaurant) {
-      return res.status(404).json({ success: false, message: "Restaurant not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Restaurant not found",
+      });
     }
 
     res.status(200).json({
       success: true,
       restaurant,
     });
+
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
@@ -83,24 +127,59 @@ export const updateRestaurant = async (req, res) => {
     const restaurant = await Restaurant.findById(req.params.id);
 
     if (!restaurant) {
-      return res.status(404).json({ success: false, message: "Restaurant not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Restaurant not found",
+      });
     }
 
     restaurant.name = req.body.name || restaurant.name;
-    restaurant.image = req.body.image || restaurant.image;
+    restaurant.description = req.body.description || restaurant.description;
     restaurant.location = req.body.location || restaurant.location;
+    restaurant.address = req.body.address || restaurant.address;
+    restaurant.phone = req.body.phone || restaurant.phone;
+    restaurant.email = req.body.email || restaurant.email;
     restaurant.cuisine = req.body.cuisine || restaurant.cuisine;
-    restaurant.deliveryTime = req.body.deliveryTime || restaurant.deliveryTime;
+    restaurant.deliveryTime =
+      req.body.deliveryTime || restaurant.deliveryTime;
+
+    restaurant.openingTime =
+      req.body.openingTime || restaurant.openingTime;
+
+    restaurant.closingTime =
+      req.body.closingTime || restaurant.closingTime;
+
+    restaurant.minimumOrderAmount =
+      req.body.minimumOrderAmount ||
+      restaurant.minimumOrderAmount;
+
+    restaurant.deliveryFee =
+      req.body.deliveryFee || restaurant.deliveryFee;
+
+    // Update Images
+    if (req.files?.image?.[0]?.filename) {
+      restaurant.image =
+        `/uploads/restaurants/${req.files.image[0].filename}`;
+    }
+
+    if (req.files?.bannerImage?.[0]?.filename) {
+      restaurant.bannerImage =
+        `/uploads/restaurants/${req.files.bannerImage[0].filename}`;
+    }
 
     await restaurant.save();
 
     res.status(200).json({
       success: true,
-      message: "Restaurant updated",
+      message: "Restaurant updated successfully",
       restaurant,
     });
+
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
@@ -113,17 +192,24 @@ export const deleteRestaurant = async (req, res) => {
     const restaurant = await Restaurant.findById(req.params.id);
 
     if (!restaurant) {
-      return res.status(404).json({ success: false, message: "Restaurant not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Restaurant not found",
+      });
     }
 
     await restaurant.deleteOne();
 
     res.status(200).json({
       success: true,
-      message: "Restaurant deleted",
+      message: "Restaurant deleted successfully",
     });
+
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
@@ -136,7 +222,26 @@ export const searchRestaurants = async (req, res) => {
     const keyword = req.query.q || "";
 
     const restaurants = await Restaurant.find({
-      name: { $regex: keyword, $options: "i" },
+      $or: [
+        {
+          name: {
+            $regex: keyword,
+            $options: "i",
+          },
+        },
+        {
+          cuisine: {
+            $regex: keyword,
+            $options: "i",
+          },
+        },
+        {
+          location: {
+            $regex: keyword,
+            $options: "i",
+          },
+        },
+      ],
     });
 
     res.status(200).json({
@@ -144,8 +249,12 @@ export const searchRestaurants = async (req, res) => {
       results: restaurants.length,
       restaurants,
     });
+
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
@@ -155,12 +264,27 @@ export const searchRestaurants = async (req, res) => {
 // ======================================================
 export const filterRestaurants = async (req, res) => {
   try {
-    const { cuisine, rating } = req.query;
+    const {
+      cuisine,
+      rating,
+      isOpen,
+    } = req.query;
 
     let query = {};
 
-    if (cuisine) query.cuisine = cuisine;
-    if (rating) query.rating = { $gte: Number(rating) };
+    if (cuisine) {
+      query.cuisine = cuisine;
+    }
+
+    if (rating) {
+      query.rating = {
+        $gte: Number(rating),
+      };
+    }
+
+    if (isOpen) {
+      query.isOpen = isOpen === "true";
+    }
 
     const restaurants = await Restaurant.find(query);
 
@@ -169,50 +293,68 @@ export const filterRestaurants = async (req, res) => {
       count: restaurants.length,
       restaurants,
     });
+
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
 
 // ======================================================
-// @desc Get Nearby Restaurants (Dummy - no geo)
+// @desc Nearby Restaurants
 // ======================================================
 export const getNearbyRestaurants = async (req, res) => {
   try {
-    const restaurants = await Restaurant.find().limit(10);
+    const restaurants = await Restaurant.find({
+      isOpen: true,
+    }).limit(10);
 
     res.status(200).json({
       success: true,
       restaurants,
     });
+
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
 
 // ======================================================
-// @desc Toggle Open/Close Status
+// @desc Toggle Restaurant Open/Close
 // ======================================================
 export const toggleRestaurantStatus = async (req, res) => {
   try {
     const restaurant = await Restaurant.findById(req.params.id);
 
     if (!restaurant) {
-      return res.status(404).json({ success: false, message: "Restaurant not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Restaurant not found",
+      });
     }
 
     restaurant.isOpen = !restaurant.isOpen;
+
     await restaurant.save();
 
     res.status(200).json({
       success: true,
-      message: "Status updated",
+      message: "Restaurant status updated",
       isOpen: restaurant.isOpen,
     });
+
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
@@ -224,23 +366,34 @@ export const getRestaurantDashboard = async (req, res) => {
   try {
     const restaurantId = req.params.id;
 
-    const totalOrders = await Order.countDocuments();
-    const totalReviews = await Review.countDocuments({ restaurant: restaurantId });
+    const restaurant =
+      await Restaurant.findById(restaurantId);
 
-    const restaurant = await Restaurant.findById(restaurantId);
+    const totalOrders =
+      await Order.countDocuments();
+
+    const totalReviews =
+      await Review.countDocuments({
+        restaurant: restaurantId,
+      });
 
     res.status(200).json({
       success: true,
       dashboard: {
-        name: restaurant?.name,
+        restaurantName: restaurant?.name,
         totalOrders,
         totalReviews,
         rating: restaurant?.rating,
+        totalRatings: restaurant?.totalReviews,
         isOpen: restaurant?.isOpen,
       },
     });
+
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
@@ -259,7 +412,11 @@ export const getOwnerRestaurants = async (req, res) => {
       count: restaurants.length,
       restaurants,
     });
+
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };

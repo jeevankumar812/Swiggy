@@ -9,6 +9,7 @@ import cors from "cors";
 import morgan from "morgan";
 
 import connectDB from "./config/db.js";
+import path from "path";
 
 // ROUTES
 import authRoutes from "./routes/authRoutes.js";
@@ -31,6 +32,7 @@ import supportRoutes from "./routes/supportRoutes.js";
 import { notFound } from "./middlewares/notFound.js";
 import { errorHandler } from "./middlewares/errorMiddleware.js";
 
+
 // CONFIG
 
 connectDB();
@@ -44,7 +46,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan("dev"));
-
+app.use("/uploads", express.static("uploads"));
 
 // ======================================================
 // API ROUTES
