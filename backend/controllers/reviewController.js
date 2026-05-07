@@ -7,10 +7,42 @@ import Restaurant from "../models/Restaurant.js";
 // ======================================================
 // @desc Create Review
 // ======================================================
+
+
+
+
+// ======================================================
+// @desc Create Review
+// ======================================================
+
 export const createReview = async (req, res) => {
   try {
     const { restaurantId, rating, comment } = req.body;
 
+    // Check restaurant exists
+    const restaurant = await Restaurant.findById(restaurantId);
+
+    if (!restaurant) {
+      return res.status(404).json({
+        success: false,
+        message: "Restaurant not found",
+      });
+    }
+
+    // Check already reviewed
+    const alreadyReviewed = await Review.findOne({
+      user: req.user._id,
+      restaurant: restaurantId,
+    });
+
+    if (alreadyReviewed) {
+      return res.status(400).json({
+        success: false,
+        message: "You already reviewed this restaurant",
+      });
+    }
+
+    // Create review
     const review = await Review.create({
       user: req.user._id,
       restaurant: restaurantId,
@@ -18,13 +50,32 @@ export const createReview = async (req, res) => {
       comment,
     });
 
+    // Get all reviews of restaurant
+    const reviews = await Review.find({
+      restaurant: restaurantId,
+    });
+
+    // Calculate average rating
+    const avgRating =
+      reviews.reduce((acc, item) => acc + item.rating, 0) /
+      reviews.length;
+
+    // Update restaurant rating
+    restaurant.rating = avgRating;
+    restaurant.totalReviews = reviews.length;
+
+    await restaurant.save();
+
     res.status(201).json({
       success: true,
-      message: "Review added",
+      message: "Review added successfully",
       review,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
@@ -145,7 +196,7 @@ export const getAverageRating = async (req, res) => {
     const restaurantId = req.params.restaurantId;
 
     const result = await Review.aggregate([
-      { $match: { restaurant: restaurantId } },
+      { $match: { restaurant: new mongoose.Types.ObjectId(restaurantId) } },
       {
         $group: {
           _id: "$restaurant",
