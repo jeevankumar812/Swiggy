@@ -9,24 +9,45 @@ import Order from "../models/Order.js";
 // ======================================================
 export const createMenuItem = async (req, res) => {
   try {
-    const { restaurant, name, description, price, category, image } = req.body;
+    const {
+      restaurant,
+      name,
+      description,
+      price,
+      originalPrice,
+      category,
+      preparationTime,
+      calories,
+      isBestSeller,
+    } = req.body;
 
     const item = await Menu.create({
       restaurant,
       name,
       description,
       price,
+      originalPrice,
       category,
-      image,
+      preparationTime,
+      calories,
+      isBestSeller,
+
+      image: req.file
+        ? `/uploads/menu/${req.file.filename}`
+        : "",
     });
 
     res.status(201).json({
       success: true,
-      message: "Menu item created",
+      message: "Menu item created successfully",
       item,
     });
+
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
@@ -38,15 +59,19 @@ export const getRestaurantMenu = async (req, res) => {
   try {
     const menu = await Menu.find({
       restaurant: req.params.restaurantId,
-    });
+    }).sort({ createdAt: -1 });
 
     res.status(200).json({
       success: true,
       count: menu.length,
       menu,
     });
+
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
@@ -56,18 +81,26 @@ export const getRestaurantMenu = async (req, res) => {
 // ======================================================
 export const getMenuItemById = async (req, res) => {
   try {
-    const item = await Menu.findById(req.params.id).populate("restaurant");
+    const item = await Menu.findById(req.params.id)
+      .populate("restaurant", "name image");
 
     if (!item) {
-      return res.status(404).json({ success: false, message: "Item not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Menu item not found",
+      });
     }
 
     res.status(200).json({
       success: true,
       item,
     });
+
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
@@ -80,24 +113,53 @@ export const updateMenuItem = async (req, res) => {
     const item = await Menu.findById(req.params.id);
 
     if (!item) {
-      return res.status(404).json({ success: false, message: "Item not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Menu item not found",
+      });
     }
 
     item.name = req.body.name || item.name;
-    item.description = req.body.description || item.description;
+
+    item.description =
+      req.body.description || item.description;
+
     item.price = req.body.price || item.price;
-    item.category = req.body.category || item.category;
-    item.image = req.body.image || item.image;
+
+    item.originalPrice =
+      req.body.originalPrice || item.originalPrice;
+
+    item.category =
+      req.body.category || item.category;
+
+    item.preparationTime =
+      req.body.preparationTime || item.preparationTime;
+
+    item.calories =
+      req.body.calories || item.calories;
+
+    item.isBestSeller =
+      req.body.isBestSeller || item.isBestSeller;
+
+    // Update image
+    if (req.file) {
+      item.image =
+        `/uploads/menu/${req.file.filename}`;
+    }
 
     await item.save();
 
     res.status(200).json({
       success: true,
-      message: "Menu updated",
+      message: "Menu item updated successfully",
       item,
     });
+
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
@@ -110,17 +172,24 @@ export const deleteMenuItem = async (req, res) => {
     const item = await Menu.findById(req.params.id);
 
     if (!item) {
-      return res.status(404).json({ success: false, message: "Item not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Menu item not found",
+      });
     }
 
     await item.deleteOne();
 
     res.status(200).json({
       success: true,
-      message: "Menu item deleted",
+      message: "Menu item deleted successfully",
     });
+
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
@@ -133,7 +202,20 @@ export const searchMenuItems = async (req, res) => {
     const keyword = req.query.q || "";
 
     const items = await Menu.find({
-      name: { $regex: keyword, $options: "i" },
+      $or: [
+        {
+          name: {
+            $regex: keyword,
+            $options: "i",
+          },
+        },
+        {
+          description: {
+            $regex: keyword,
+            $options: "i",
+          },
+        },
+      ],
     });
 
     res.status(200).json({
@@ -141,8 +223,12 @@ export const searchMenuItems = async (req, res) => {
       results: items.length,
       items,
     });
+
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
@@ -160,20 +246,32 @@ export const filterMenuByCategory = async (req, res) => {
 
     res.status(200).json({
       success: true,
+      count: items.length,
       items,
     });
+
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
 
 // ======================================================
-// @desc Toggle Availability
+// @desc Toggle Menu Availability
 // ======================================================
 export const toggleAvailability = async (req, res) => {
   try {
     const item = await Menu.findById(req.params.id);
+
+    if (!item) {
+      return res.status(404).json({
+        success: false,
+        message: "Menu item not found",
+      });
+    }
 
     item.isAvailable = !item.isAvailable;
 
@@ -181,11 +279,15 @@ export const toggleAvailability = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: "Availability updated",
+      message: "Availability updated successfully",
       isAvailable: item.isAvailable,
     });
+
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
@@ -200,16 +302,22 @@ export const bulkUpdatePrices = async (req, res) => {
     const items = await Menu.find();
 
     for (let item of items) {
-      item.price = item.price + (item.price * percentage) / 100;
+      item.price =
+        item.price + (item.price * percentage) / 100;
+
       await item.save();
     }
 
     res.status(200).json({
       success: true,
-      message: "Prices updated",
+      message: "Prices updated successfully",
     });
+
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
@@ -226,23 +334,31 @@ export const getPopularItems = async (req, res) => {
     orders.forEach((order) => {
       order.items.forEach((item) => {
         const id = item.menuItem.toString();
-        itemCount[id] = (itemCount[id] || 0) + item.quantity;
+
+        itemCount[id] =
+          (itemCount[id] || 0) + item.quantity;
       });
     });
 
-    const sorted = Object.entries(itemCount)
+    const sortedItems = Object.entries(itemCount)
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 5);
+      .slice(0, 10);
 
     const popularItems = await Menu.find({
-      _id: { $in: sorted.map((i) => i[0]) },
+      _id: {
+        $in: sortedItems.map((item) => item[0]),
+      },
     });
 
     res.status(200).json({
       success: true,
       popularItems,
     });
+
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
