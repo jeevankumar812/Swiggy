@@ -1,10 +1,41 @@
 import multer from "multer";
 import path from "path";
+import fs from "fs";
 
-// Storage config
+// Create folders automatically
+const folders = [
+  "uploads",
+  "uploads/restaurants",
+  "uploads/menu",
+];
+
+folders.forEach((folder) => {
+  if (!fs.existsSync(folder)) {
+    fs.mkdirSync(folder, { recursive: true });
+  }
+});
+
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, "uploads/restaurants");
+
+    // Menu Images
+    if (
+      req.originalUrl.includes("/menu")
+    ) {
+      cb(null, "uploads/menu");
+    }
+
+    // Restaurant Images
+    else if (
+      req.originalUrl.includes("/restaurants")
+    ) {
+      cb(null, "uploads/restaurants");
+    }
+
+    // Default
+    else {
+      cb(null, "uploads");
+    }
   },
 
   filename: function (req, file, cb) {
@@ -15,20 +46,23 @@ const storage = multer.diskStorage({
   },
 });
 
-// File filter
 const fileFilter = (req, file, cb) => {
-  const allowedTypes = /jpg|jpeg|png/;
+
+  const allowedTypes =
+    /jpg|jpeg|png|webp/;
 
   const extname = allowedTypes.test(
     path.extname(file.originalname).toLowerCase()
   );
 
-  const mimetype = allowedTypes.test(file.mimetype);
+  const mimetype = allowedTypes.test(
+    file.mimetype
+  );
 
   if (extname && mimetype) {
     cb(null, true);
   } else {
-    cb(new Error("Only images allowed"));
+    cb(new Error("Only image files allowed"));
   }
 };
 
