@@ -66,6 +66,13 @@ router.get(
 // ======================================================
 // OWNER ROUTES
 // ======================================================
+router.put(
+  "/bulk-update",
+  protect,
+  ownerOnly,
+  asyncHandler(bulkUpdatePrices)
+);
+
 
 // Create menu item with image upload
 router.post(
@@ -110,12 +117,7 @@ router.put(
 
 
 // Bulk price update
-router.put(
-  "/bulk-update",
-  protect,
-  ownerOnly,
-  asyncHandler(bulkUpdatePrices)
-);
 
+router.get("/popular", asyncHandler(getPopularItems));
 
 export default router;
