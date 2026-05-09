@@ -36,7 +36,7 @@ router.post("/reorder/:id", protect, asyncHandler(reorderItems));
 router.put("/cancel/:id", protect, asyncHandler(cancelOrder));
 
 // generic LAST
-router.get("/:id", protect, asyncHandler(getOrderById));
+
 
 
 // ======================================================
@@ -53,5 +53,6 @@ router.get("/", protect, adminOnly, asyncHandler(getAllOrders));
 router.get("/pending", protect, adminOnly, asyncHandler(getPendingOrders));
 router.put("/assign/:id", protect, adminOnly, asyncHandler(assignDeliveryPartner));
 
+router.get("/:id", protect, asyncHandler(getOrderById));
 
 export default router;
