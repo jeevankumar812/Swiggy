@@ -169,19 +169,23 @@ export const paymentWebhook = async (req, res) => {
 // ======================================================
 export const getPaymentByOrderId = async (req, res) => {
   try {
+
     const payment = await Payment.findOne({
       order: req.params.orderId,
-    });
+    }).sort({ createdAt: -1 });
 
     res.status(200).json({
       success: true,
       payment,
     });
+
   } catch (error) {
+
     res.status(500).json({
       success: false,
       message: error.message,
     });
+
   }
 };
 
